@@ -14,12 +14,11 @@ async function generateKeypair(mnemonic) {
   const strippedPubKey = originalPublicKey.subarray(1);
   const publicKeyHash = keccak256(strippedPubKey);
   const addressBytes = publicKeyHash.slice(-20);
-  const address = bufferToHex(addressBytes);
 
   return {
-    address: address.toLowerCase(),
-    privateKey: bufferToHex(keys.secretKey),
-    publicKey: bufferToHex(originalPublicKey),
+    address: "0x" + Buffer.from(addressBytes).toString("hex"),
+    secretKey: keys.secretKey,
+    publicKey: keys.publicKey,
   };
 }
 

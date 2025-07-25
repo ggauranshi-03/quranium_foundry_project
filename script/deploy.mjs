@@ -1,19 +1,39 @@
-// scripts/deploy.js
-import { signTransaction } from "./slh-utils.mjs";
+// scripts/deploy.mjs
+import { generateKeypair, signTransaction } from "./slh-utils.mjs";
 import { fetchFromNode } from "./rpc-utils.mjs";
 
 async function main() {
   const args = process.argv.slice(2);
-  const nonce = parseInt(args[0]);
-  const gasPrice = parseInt(args[1]);
-  const gasLimit = parseInt(args[2]);
-  const bytecode = args[3];
-  const address = args[4];
-  const secretKey = Uint8Array.from(Buffer.from(args[5].slice(2), "hex"));
-  const publicKey = Uint8Array.from(Buffer.from(args[6].slice(2), "hex"));
-  const rpcUrl = args[7];
+  const bytecode = args[0];
+  const mnemonic = args[1];
+  const rpcUrl = args[2];
+  const chainId = parseInt(args[3]) || 4062024;
 
   process.env.QURANIUM_RPC = rpcUrl;
+
+  // Generate keys from mnemonic
+  const keypair = await generateKeypair(mnemonic);
+  console.log("Deploying from address:", keypair.address);
+
+  // Get account nonce
+  const nonceHex = await fetchFromNode("eth_getTransactionCount", [
+    keypair.address,
+    "latest",
+  ]);
+  const nonce = parseInt(nonceHex, 16);
+
+  // Get gas price
+  const gasPriceHex = await fetchFromNode("eth_gasPrice");
+  const gasPrice = parseInt(gasPriceHex, 16);
+
+  // Estimate gas
+  const gasEstimateHex = await fetchFromNode("eth_estimateGas", [
+    {
+      from: keypair.address,
+      data: bytecode.startsWith("0x") ? bytecode : "0x" + bytecode,
+    },
+  ]);
+  const gasLimit = parseInt(gasEstimateHex, 16);
 
   const transaction = {
     nonce: nonce,
@@ -22,18 +42,33 @@ async function main() {
     to: null,
     value: 0,
     data: bytecode.startsWith("0x") ? bytecode : "0x" + bytecode,
-    chainId: 4062024,
-    from: address,
+    chainId: chainId,
+    from: keypair.address,
   };
 
-  const rawTx = await signTransaction(transaction, { secretKey, publicKey });
-  const txHash = await fetchFromNode("eth_sendRawTransaction", [rawTx]);
+  const rawTx = await signTransaction(transaction, {
+    secretKey: keypair.secretKey,
+    publicKey: keypair.publicKey,
+  });
 
-  // Return result to Solidity
+  const txHash = await fetchFromNode("eth_sendRawTransaction", [rawTx]);
+  console.log("Transaction sent, hash:", txHash);
+
+  // Wait for receipt
+  let receipt;
+  while (!receipt) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    receipt = await fetchFromNode("eth_getTransactionReceipt", [txHash]);
+    if (receipt) {
+      console.log("Transaction mined, block:", receipt.blockNumber);
+    }
+  }
+
   console.log(
     JSON.stringify({
       success: true,
       txHash: txHash,
+      contractAddress: receipt.contractAddress,
     })
   );
 }

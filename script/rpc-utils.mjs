@@ -1,7 +1,7 @@
-// scripts/rpc-utils.js
-const fetch = require("node-fetch");
+// scripts/rpc-utils.mjs
+import fetch from "node-fetch";
 
-async function fetchFromNode(method, params = []) {
+export async function fetchFromNode(method, params = []) {
   const response = await fetch(process.env.QURANIUM_RPC, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -16,4 +16,3 @@ async function fetchFromNode(method, params = []) {
   if (data.error) throw new Error(`RPC Error: ${data.error.message}`);
   return data.result;
 }
-module.exports = { fetchFromNode };

@@ -1,6 +1,6 @@
 // scripts/deploy.js
-const { signTransaction } = require("./slh-utils.mjs");
-const { fetchFromNode } = require("./rpc-utils.mjs");
+import { signTransaction } from "./slh-utils.mjs";
+import { fetchFromNode } from "./rpc-utils.mjs";
 
 async function main() {
   const args = process.argv.slice(2);

@@ -1,10 +1,10 @@
 // scripts/slh-utils.js
-const slh = require("@noble/post-quantum/slh-dsa");
-const { mnemonicToEntropy } = require("bip39");
-const { shake256 } = require("@noble/hashes/sha3");
-const { keccak256 } = require("ethereum-cryptography/keccak");
-const { Buffer } = require("buffer");
-
+import * as slh from "@noble/post-quantum/slh-dsa";
+import { mnemonicToEntropy } from "bip39";
+import { shake256 } from "@noble/hashes/sha3";
+import { keccak256 } from "ethereum-cryptography/keccak";
+import { Buffer } from "buffer";
+import rlp from "rlp";
 // Helper functions (generateKeypair, signTransaction) from your Hardhat script
 async function generateKeypair(mnemonic) {
   const entropy = Buffer.from(mnemonicToEntropy(mnemonic), "hex");
@@ -14,10 +14,12 @@ async function generateKeypair(mnemonic) {
   const strippedPubKey = originalPublicKey.subarray(1);
   const publicKeyHash = keccak256(strippedPubKey);
   const addressBytes = publicKeyHash.slice(-20);
+  const address = bufferToHex(addressBytes);
+
   return {
-    address: "0x" + Buffer.from(addressBytes).toString("hex"),
-    secretKey: keys.secretKey, // Keep as Uint8Array
-    publicKey: keys.publicKey, // Keep as Uint8Array
+    address: address.toLowerCase(),
+    privateKey: bufferToHex(keys.secretKey),
+    publicKey: bufferToHex(originalPublicKey),
   };
 }
 
@@ -77,12 +79,12 @@ async function signTransaction(transaction, keys) {
     );
   }
   console.log("Public key (hex, no 0x):", publicKeyHex);
-  console.log("RLP fields for signing:", txFieldsForSigning);
-  console.log(
-    "RLP-encoded unsigned tx (hex):",
-    Buffer.from(rlpEncoded).toString("hex")
-  );
-  console.log("Message hash (hex):", Buffer.from(msgHash).toString("hex"));
+  // console.log("RLP fields for signing:", txFieldsForSigning);
+  // console.log(
+  //   "RLP-encoded unsigned tx (hex):",
+  //   Buffer.from(rlpEncoded).toString("hex")
+  // );
+  // console.log("Message hash (hex):", Buffer.from(msgHash).toString("hex"));
 
   // Sign the hash with SLH-DSA
   const signature = slh.slh_dsa_shake_256f.sign(
@@ -92,10 +94,10 @@ async function signTransaction(transaction, keys) {
   );
   const signatureHex = Buffer.from(signature).toString("hex");
   const sig = signatureHex + publicKeyHex;
-  console.log("Signature length:", signature.length);
-  console.log("Public key length:", keys.publicKey.length);
-  console.log("sig+pubkey length:", sig.length / 2);
-  console.log("Signature (hex):", signatureHex);
+  // console.log("Signature length:", signature.length);
+  // console.log("Public key length:", keys.publicKey.length);
+  // console.log("sig+pubkey length:", sig.length / 2);
+  // console.log("Signature (hex):", signatureHex);
 
   // Prepare final tx fields as hex strings
   const txFieldsSigned = [
@@ -108,9 +110,9 @@ async function signTransaction(transaction, keys) {
     "0x" + sig,
     toHex(transaction.chainId),
   ];
-  console.log("RLP fields for sending:", txFieldsSigned);
+  // console.log("RLP fields for sending:", txFieldsSigned);
   const rawTx = "0x" + rlp.encode(txFieldsSigned).toString("hex");
   return rawTx;
 }
 
-module.exports = { generateKeypair, signTransaction };
+export { generateKeypair, signTransaction };

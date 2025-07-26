@@ -4,4 +4,5 @@ out = "out"
 libs = ["lib"]
 [rpc_endpoints]
 quranium = "https://tqrn-node1.quranium.org/node"
+dotenv = ".env"
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

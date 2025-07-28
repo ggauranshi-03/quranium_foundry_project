@@ -21,6 +21,17 @@ async function generateKeypair(mnemonic) {
     publicKey: keys.publicKey,
   };
 }
+function hexToBuffer(hexStr) {
+  if (hexStr === "") {
+    return Buffer.alloc(0);
+  }
+  let hex = hexStr.startsWith("0x") ? hexStr.slice(2) : hexStr;
+  // Pad to even length if needed
+  if (hex.length % 2 !== 0) {
+    hex = "0" + hex;
+  }
+  return Buffer.from(hex, "hex");
+}
 
 async function signTransaction(transaction, keys) {
   // Helper to ensure minimal hex string with 0x prefix
@@ -51,14 +62,14 @@ async function signTransaction(transaction, keys) {
     toHex(transaction.gasPrice),
     toHex(transaction.gasLimit),
     transaction.to ? toHex(transaction.to) : "0x",
-    transaction.value === 0 ? "" : toHex(transaction.value, true),
+    toHex(transaction.value, true),
     toHex(transaction.data),
     toHex(transaction.chainId),
     "0x",
     "0x",
   ];
 
-  const rlpEncoded = rlp.encode(txFieldsForSigning);
+  const rlpEncoded = rlp.encode(txFieldsForSigning.map(hexToBuffer));
   const msgHash = keccak256(rlpEncoded);
 
   // Print debug info
@@ -91,6 +102,7 @@ async function signTransaction(transaction, keys) {
     // keys.publicKey,
     msgHash
   );
+  console.log("signature size", signature.length);
   const signatureHex = Buffer.from(signature).toString("hex");
   const sig = signatureHex + publicKeyHex;
   // console.log("Signature length:", signature.length);
@@ -104,13 +116,14 @@ async function signTransaction(transaction, keys) {
     toHex(transaction.gasPrice),
     toHex(transaction.gasLimit),
     transaction.to ? toHex(transaction.to) : "0x",
-    transaction.value === 0 ? "" : toHex(transaction.value, true),
+    toHex(transaction.value, true),
     toHex(transaction.data),
     "0x" + sig,
     toHex(transaction.chainId),
   ];
   // console.log("RLP fields for sending:", txFieldsSigned);
-  const rawTx = "0x" + rlp.encode(txFieldsSigned).toString("hex");
+  const rawTx =
+    "0x" + rlp.encode(txFieldsSigned.map(hexToBuffer)).toString("hex");
   return rawTx;
 }
 

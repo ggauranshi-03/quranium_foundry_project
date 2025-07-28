@@ -64,3 +64,7 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+```shell
+forge script script/QuraniumDeploy.s.sol:QuraniumDeployer \ --rpc-url https://tqrn-node1.quranium.org/node --broadcast --ffi -vvvv
+```
